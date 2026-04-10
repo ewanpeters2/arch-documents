@@ -1,0 +1,13 @@
+# Copilot Instructions
+
+## ADR Generation Rules
+
+When asked to create an Architecture Decision Record (ADR):
+
+1. **Template**: Use exactly `doc-templates/adr-template.md`
+2. **Output Location**: Save to `adr-docs/adr-XXX-kebab-case-title.md`
+3. **Auto-fill**:
+   - `{{DATE}}` → Current date (YYYY-MM-DD)
+   - `{{STATUS}}` → Draft
+4. **Preserve**: Keep all HTML comments from the template
+5. **No extras**: Do not add sections or formatting not in the template
