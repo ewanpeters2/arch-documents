@@ -9,5 +9,6 @@ When asked to create an Architecture Decision Record (ADR):
 3. **Auto-fill**:
    - `{{DATE}}` → Current date (YYYY-MM-DD)
    - `{{STATUS}}` → Draft
+   - `{{OWNER}}` → Use the current Git user (git config user.name)
 4. **Preserve**: Keep all HTML comments from the template
 5. **No extras**: Do not add sections or formatting not in the template
