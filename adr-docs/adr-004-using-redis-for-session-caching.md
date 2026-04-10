@@ -1,7 +1,7 @@
 # ADR-004: Using Redis for Session Caching
 
 ## Status
-Draft <!-- Draft | Proposed | Accepted | Deprecated | Superseded -->
+Proposed <!-- Draft | Proposed | Accepted | Deprecated | Superseded -->
 
 ## Date
 2026-04-10
