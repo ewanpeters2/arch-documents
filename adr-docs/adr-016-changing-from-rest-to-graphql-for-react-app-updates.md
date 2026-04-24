@@ -24,35 +24,32 @@ Our React application currently uses multiple REST endpoints to fetch data, resu
 Migrate from REST APIs to GraphQL for the React application. Implement a GraphQL server (Apollo Server) that aggregates existing backend services, allowing the frontend to request exactly the data it needs in a single query.
 
 ## Architecture Diagram
-<!-- Visualise the architecture using Mermaid syntax -->
+<!-- Visualise the architecture using Mermaid C4 syntax -->
 ```mermaid
-flowchart LR
-    subgraph Frontend
-        A[React App]
-        B[Apollo Client]
-    end
+C4Context
+    title System Context Diagram - GraphQL for React App
+
+    Person(user, "User", "End user accessing the React application")
     
-    subgraph Backend
-        C[GraphQL Server]
-        D[User Service]
-        E[Game Service]
-        F[Stats Service]
-    end
+    System(reactApp, "React Application", "Frontend SPA with Apollo Client")
+    System(graphqlServer, "GraphQL Server", "Apollo Server aggregating backend services")
     
-    subgraph Data
-        G[(PostgreSQL)]
-        H[(Redis Cache)]
-    end
+    System_Ext(userService, "User Service", "Manages user data and authentication")
+    System_Ext(gameService, "Game Service", "Handles game logic and state")
+    System_Ext(statsService, "Stats Service", "Provides analytics and statistics")
     
-    A --> B
-    B -->|Single Query| C
-    C --> D
-    C --> E
-    C --> F
-    D --> G
-    E --> G
-    F --> G
-    C --> H
+    SystemDb(postgres, "PostgreSQL", "Primary data store")
+    SystemDb(redis, "Redis", "Caching layer")
+
+    Rel(user, reactApp, "Uses", "HTTPS")
+    Rel(reactApp, graphqlServer, "Queries/Mutations", "GraphQL over HTTPS")
+    Rel(graphqlServer, userService, "Fetches user data", "REST/gRPC")
+    Rel(graphqlServer, gameService, "Fetches game data", "REST/gRPC")
+    Rel(graphqlServer, statsService, "Fetches stats", "REST/gRPC")
+    Rel(graphqlServer, redis, "Caches responses", "Redis Protocol")
+    Rel(userService, postgres, "Reads/Writes", "SQL")
+    Rel(gameService, postgres, "Reads/Writes", "SQL")
+    Rel(statsService, postgres, "Reads/Writes", "SQL")
 ```
 
 ## Principles Alignment
