@@ -42,6 +42,28 @@
 | Technology Standards | ✅ / ⚠️ / ❌ | |
 | Data Management | ✅ / ⚠️ / ❌ | |
 
+## Impacts
+<!-- What areas will be impacted by this decision? -->
+
+### Teams Impacted
+{{TEAMS_IMPACTED}}
+
+### Systems Impacted
+{{SYSTEMS_IMPACTED}}
+
+### Timeline
+| Phase | Description | Duration |
+|-------|-------------|----------|
+| {{PHASE_1}} | {{PHASE_1_DESC}} | {{PHASE_1_DURATION}} |
+| {{PHASE_2}} | {{PHASE_2_DESC}} | {{PHASE_2_DURATION}} |
+| {{PHASE_3}} | {{PHASE_3_DESC}} | {{PHASE_3_DURATION}} |
+
+### Risks
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| {{RISK_1}} | High/Medium/Low | High/Medium/Low | {{MITIGATION_1}} |
+| {{RISK_2}} | High/Medium/Low | High/Medium/Low | {{MITIGATION_2}} |
+
 ## Consequences
 <!-- What becomes easier or more difficult to do because of this change? -->
 

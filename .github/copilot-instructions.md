@@ -73,6 +73,39 @@ Choose the most appropriate diagram type based on the ADR topic.
 | `Review ADR` | Check active ADR against principles |
 | `@adr /new [title]` | Interactive ADR creation |
 
+## Impacts Section Guidelines
+
+When generating the Impacts section, automatically include:
+
+### Teams Impacted
+Identify teams based on the ADR category:
+- **Infrastructure**: Platform, DevOps, SRE
+- **Data**: Data Engineering, Analytics, BI
+- **Security**: Security, Compliance
+- **Integration**: Backend, API, Integration
+- **API**: Frontend, Backend, Mobile
+- **Other**: Infer from context
+
+### Systems Impacted
+List systems affected based on the decision:
+- Upstream systems (data sources)
+- Downstream systems (consumers)
+- Supporting systems (auth, logging, monitoring)
+
+### Timeline
+Generate realistic phases:
+- **Phase 1**: Design/Planning (1-2 weeks)
+- **Phase 2**: Implementation (2-4 weeks)
+- **Phase 3**: Testing/Rollout (1-2 weeks)
+
+### Risks
+Identify common risks based on category:
+- **Infrastructure**: Downtime, migration complexity, cost overrun
+- **Data**: Data loss, consistency issues, performance degradation
+- **Security**: Vulnerabilities, compliance gaps
+- **Integration**: Breaking changes, backward compatibility
+- **API**: Client impact, versioning challenges
+
 ## Minimal Prompt Support
 
 If the user provides only a title:
