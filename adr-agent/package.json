@@ -1,0 +1,48 @@
+{
+  "name": "adr-agent",
+  "displayName": "ADR Agent",
+  "description": "Create Architecture Decision Records with AI assistance",
+  "version": "0.0.1",
+  "publisher": "ewan-peters",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "adr-agent.adr",
+        "name": "adr",
+        "description": "Creates Architecture Decision Records with AI assistance",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "new",
+            "description": "Create a new ADR with AI-assisted prompts"
+          },
+          {
+            "name": "suggest",
+            "description": "Get AI suggestions for ADR content"
+          },
+          {
+            "name": "list",
+            "description": "List existing ADRs"
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.0"
+  }
+}
