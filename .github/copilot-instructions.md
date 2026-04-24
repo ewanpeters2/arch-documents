@@ -31,6 +31,38 @@ When asked to create an Architecture Decision Record (ADR):
 4. **Principles Alignment**: Evaluate decision against architecture principles
 5. **Preserve**: Keep all HTML comments from the template
 6. **IMPORTANT**: Always include the filepath comment at the top of the code block
+7. **Architecture Diagram**: Generate a Mermaid diagram showing the architecture
+
+## Diagram Guidelines
+
+When creating the Architecture Diagram section, use Mermaid syntax:
+
+### Flow Diagram (for data/process flows)
+```mermaid
+flowchart LR
+    A[Client] --> B[API Gateway]
+    B --> C[Service]
+    C --> D[(Database)]
+```
+
+### Sequence Diagram (for interactions)
+```mermaid
+sequenceDiagram
+    Client->>API: Request
+    API->>Service: Process
+    Service-->>API: Response
+    API-->>Client: Result
+```
+
+### C4 Context Diagram (for system context)
+```mermaid
+C4Context
+    Person(user, "User")
+    System(system, "System")
+    Rel(user, system, "Uses")
+```
+
+Choose the most appropriate diagram type based on the ADR topic.
 
 ## Prompt Formats Supported
 
