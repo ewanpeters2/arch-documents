@@ -19,14 +19,14 @@ A VS Code workspace for creating and managing Architecture Decision Records with
 
 2. **Install the ADR Agent extension:**
    ```bash
-   code --install-extension adr-agent/adr-agent-0.0.2.vsix
+   code --install-extension adr-agent/adr-agent-0.0.3.vsix
    ```
 
    Or manually:
    - Open VS Code
    - Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
    - Type "Install from VSIX"
-   - Select `adr-agent/adr-agent-0.0.2.vsix`
+   - Select `adr-agent/adr-agent-0.0.3.vsix`
 
 3. **Reload VS Code:**
    - Press `Cmd+Shift+P` → "Reload Window"
@@ -39,8 +39,9 @@ Open GitHub Copilot Chat (`Cmd+Shift+I` or click the Copilot icon) and use the `
 
 | Command | Description |
 |---------|-------------|
-| `@adr /new` | Start a guided 6-step interview to create an ADR |
-| `@adr /quick [title]` | Quick ADR creation with interactive prompts |
+| `@adr /new` | Start a guided 6-step interview to create an ADR (multi-turn conversation) |
+| `@adr /quick [title]` | Quick ADR creation with VS Code input dialogs |
+| `@adr /cancel` | Cancel an in-progress interview |
 | `@adr /list` | List all existing ADRs with their status |
 | `@adr /review` | Review the open ADR against architecture principles |
 | `@adr /suggest [topic]` | Get AI suggestions for ADR content |
@@ -117,7 +118,7 @@ arch-documents/
 ├── adr-agent/              # VS Code extension source
 │   ├── src/extension.ts    # Extension code
 │   ├── package.json        # Extension manifest
-│   └── adr-agent-0.0.2.vsix # Packaged extension
+│   └── adr-agent-0.0.3.vsix # Packaged extension
 ├── adr-docs/               # Generated ADRs
 │   ├── adr-001-*.md
 │   ├── adr-002-*.md
@@ -147,7 +148,7 @@ npx vsce package
 cd adr-agent
 npm run compile
 npx vsce package
-code --install-extension adr-agent-0.0.2.vsix --force
+code --install-extension adr-agent-0.0.3.vsix --force
 ```
 
 ## 📝 Using Copilot Chat (Alternative)
