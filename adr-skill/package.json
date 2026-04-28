@@ -1,0 +1,57 @@
+{
+  "name": "adr-skill",
+  "displayName": "ADR Skill",
+  "description": "Create Architecture Decision Records with guided interview flow",
+  "version": "0.0.1",
+  "publisher": "ewan-peters",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "adr-skill.write-adr",
+        "name": "write-adr",
+        "description": "Create Architecture Decision Records with guided interview flow",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "new",
+            "description": "Start a new ADR with guided interview"
+          },
+          {
+            "name": "quick",
+            "description": "Quick ADR creation (minimal prompts)"
+          },
+          {
+            "name": "list",
+            "description": "List existing ADRs"
+          },
+          {
+            "name": "review",
+            "description": "Review an ADR against architecture principles"
+          },
+          {
+            "name": "suggest",
+            "description": "Get suggestions for ADR content by topic"
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.0"
+  }
+}
