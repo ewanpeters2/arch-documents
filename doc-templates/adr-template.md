@@ -1,19 +1,14 @@
 # ADR-{{NUMBER}}: {{TITLE}}
 
-## Status
-{{STATUS}} <!-- Draft | Proposed | Accepted | Deprecated | Superseded -->
+## Metadata
 
-## Date
-{{DATE}}
-
-## Owner
-{{OWNER}}
-
-## Category
-{{CATEGORY}} <!-- Infrastructure | Data | Security | Integration | API | Other -->
-
-## Priority
-{{PRIORITY}} <!-- High | Medium | Low -->
+| Field | Value |
+|-------|-------|
+| **Status** | {{STATUS}} <!-- Draft | Proposed | Accepted | Deprecated | Superseded --> |
+| **Date** | {{DATE}} |
+| **Owner** | {{OWNER}} |
+| **Category** | {{CATEGORY}} <!-- Infrastructure | Data | Security | Integration | API | Other --> |
+| **Priority** | {{PRIORITY}} <!-- High | Medium | Low --> |
 
 ## Context
 <!-- What is the issue that we're seeing that is motivating this decision or change? -->
