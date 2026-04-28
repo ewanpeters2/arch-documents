@@ -1,9 +1,10 @@
 {
   "name": "adr-agent",
   "displayName": "ADR Agent",
-  "description": "Create Architecture Decision Records with AI assistance",
-  "version": "0.0.1",
+  "description": "Create Architecture Decision Records with guided interview and AI assistance",
+  "version": "0.0.2",
   "publisher": "ewan-peters",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -15,20 +16,28 @@
       {
         "id": "adr-agent.adr",
         "name": "adr",
-        "description": "Creates Architecture Decision Records with AI assistance",
+        "description": "Creates Architecture Decision Records with guided interview and AI assistance",
         "isSticky": true,
         "commands": [
           {
             "name": "new",
-            "description": "Create a new ADR with AI-assisted prompts"
+            "description": "Start guided ADR interview (6 steps)"
           },
           {
-            "name": "suggest",
-            "description": "Get AI suggestions for ADR content"
+            "name": "quick",
+            "description": "Quick ADR creation with minimal prompts"
           },
           {
             "name": "list",
-            "description": "List existing ADRs"
+            "description": "List existing ADRs with status"
+          },
+          {
+            "name": "review",
+            "description": "Review open ADR against architecture principles"
+          },
+          {
+            "name": "suggest",
+            "description": "Get AI suggestions for ADR content by topic"
           }
         ]
       }
