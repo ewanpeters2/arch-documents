@@ -2,7 +2,7 @@
   "name": "adr-agent",
   "displayName": "ADR Agent",
   "description": "Create Architecture Decision Records with guided interview and AI assistance",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "ewan-peters",
   "license": "MIT",
   "engines": {
@@ -21,11 +21,15 @@
         "commands": [
           {
             "name": "new",
-            "description": "Start guided ADR interview (6 steps)"
+            "description": "Start guided ADR interview (6 steps with multi-turn conversation)"
           },
           {
             "name": "quick",
-            "description": "Quick ADR creation with minimal prompts"
+            "description": "Quick ADR creation with VS Code input dialogs"
+          },
+          {
+            "name": "cancel",
+            "description": "Cancel the current interview"
           },
           {
             "name": "list",

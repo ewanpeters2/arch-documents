@@ -3,6 +3,63 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // =============================================================================
+// INTERVIEW STATE MANAGEMENT
+// =============================================================================
+
+interface InterviewState {
+  step: number;
+  title: string;
+  problemStatement: string;
+  currentState: string;
+  statusQuoConsequences: string;
+  scope: string;
+  systemsAffected: string[];
+  drivers: string[];
+  options: string[];
+  selectedOption: string;
+  positive: string[];
+  negative: string[];
+  recommendation: string;
+  priority: string;
+  category: string;
+}
+
+// Store interview state per workspace
+const interviewStates: Map<string, InterviewState> = new Map();
+
+function getInterviewState(workspaceFolder: string): InterviewState | undefined {
+  return interviewStates.get(workspaceFolder);
+}
+
+function setInterviewState(workspaceFolder: string, state: InterviewState): void {
+  interviewStates.set(workspaceFolder, state);
+}
+
+function clearInterviewState(workspaceFolder: string): void {
+  interviewStates.delete(workspaceFolder);
+}
+
+function createEmptyInterviewState(): InterviewState {
+  return {
+    step: 1,
+    title: '',
+    problemStatement: '',
+    currentState: '',
+    statusQuoConsequences: '',
+    scope: '',
+    systemsAffected: [],
+    drivers: [],
+    options: [],
+    selectedOption: '',
+    positive: [],
+    negative: [],
+    recommendation: '',
+    priority: 'Medium',
+    category: 'Other'
+  };
+}
+
+// =============================================================================
 // ADR TEMPLATE - Full template with all sections
 // =============================================================================
 
@@ -399,29 +456,63 @@ export function activate(context: vscode.ExtensionContext) {
     const adrDir = path.join(workspaceFolder, 'adr-docs');
 
     // =========================================================================
-    // COMMAND: /new - Guided Interview
+    // Check for active interview and handle follow-up responses
+    // =========================================================================
+    const currentState = getInterviewState(workspaceFolder);
+    
+    // If there's an active interview and no command, process the response
+    if (currentState && !request.command && request.prompt) {
+      await handleInterviewResponse(currentState, request.prompt, workspaceFolder, adrDir, stream);
+      return;
+    }
+
+    // =========================================================================
+    // COMMAND: /new - Start Guided Interview
     // =========================================================================
     if (request.command === 'new') {
+      // Initialize new interview state
+      const newState = createEmptyInterviewState();
+      
+      // If a title was provided, use it
+      if (request.prompt) {
+        newState.title = request.prompt;
+        const topic = detectTopic(request.prompt);
+        newState.category = detectCategory(request.prompt);
+      }
+      
+      setInterviewState(workspaceFolder, newState);
+      
       stream.markdown(`## 🏗️ New ADR - Guided Interview
 
-I'll guide you through creating an Architecture Decision Record. Let's start!
+I'll guide you through creating an Architecture Decision Record step by step.
 
 ---
 
 ### [1/6] Problem Statement
 
-Please answer the following:
+Please provide the following information:
 
-1. **What problem are you trying to solve?** Describe it in plain language.
-2. **What is the current state?** What is in place today, and why is it insufficient?
-3. **What happens if no decision is made?** (status quo consequences)
+1. **What problem are you trying to solve?**
+2. **What is the current state?** (What exists today and why is it insufficient?)
+3. **What happens if no decision is made?** (Status quo consequences)
 
-*Reply with your answers, then I'll continue to the next section.*
+*Just type your answers naturally, and I'll extract the key information.*
 
 ---
 
-💡 **Tip:** You can also use \`@adr /quick [title]\` for faster ADR creation with minimal prompts.
+💡 **Tips:**
+- Type \`@adr /cancel\` to cancel the interview
+- Type \`@adr /quick [title]\` for faster ADR creation
 `);
+      return;
+    }
+
+    // =========================================================================
+    // COMMAND: /cancel - Cancel Interview
+    // =========================================================================
+    if (request.command === 'cancel') {
+      clearInterviewState(workspaceFolder);
+      stream.markdown('🛑 **Interview cancelled.** Start a new one with `@adr /new`');
       return;
     }
 
@@ -495,73 +586,18 @@ Please answer the following:
       });
       if (customOption) options.push(customOption);
 
-      // Generate ADR content
-      const nextNum = getNextAdrNumber(adrDir);
-      const date = new Date().toISOString().split('T')[0];
-      const owner = 'Ewan Peters';
-      const kebabTitle = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const filename = `adr-${nextNum}-${kebabTitle}.md`;
-      const filepath = path.join(adrDir, filename);
-
-      // Get topic-specific data
-      const topicData = topic ? TOPIC_SUGGESTIONS[topic] : null;
-      const teams = topicData?.teams || ['Engineering Team', 'Platform Team'];
-      const risks = topicData?.risks || [
-        { risk: 'Implementation complexity', likelihood: 'Medium', impact: 'Medium', mitigation: 'Spike/POC first' }
-      ];
-
-      const content = ADR_TEMPLATE
-        .replace('{{NUMBER}}', nextNum)
-        .replace('{{TITLE}}', title)
-        .replace('{{STATUS}}', 'Draft')
-        .replace('{{DATE}}', date)
-        .replace('{{OWNER}}', owner)
-        .replace('{{CATEGORY}}', category)
-        .replace('{{PRIORITY}}', priority)
-        .replace('{{CONTEXT}}', problemStatement || 'To be defined')
-        .replace('{{DECISION}}', decision || 'To be defined')
-        .replace('{{DIAGRAM}}', generateDiagram(topic, title))
-        .replace('{{CLOUD_FIRST}}', '✅').replace('{{CLOUD_FIRST_NOTES}}', '')
-        .replace('{{API_FIRST}}', '✅').replace('{{API_FIRST_NOTES}}', '')
-        .replace('{{SECURITY}}', '✅').replace('{{SECURITY_NOTES}}', '')
-        .replace('{{OBSERVABILITY}}', '⚠️').replace('{{OBSERVABILITY_NOTES}}', 'Review needed')
-        .replace('{{RESILIENCE}}', '⚠️').replace('{{RESILIENCE_NOTES}}', 'Review needed')
-        .replace('{{COST}}', '✅').replace('{{COST_NOTES}}', '')
-        .replace('{{TECH_STANDARDS}}', '✅').replace('{{TECH_STANDARDS_NOTES}}', '')
-        .replace('{{DATA_MGMT}}', '✅').replace('{{DATA_MGMT_NOTES}}', '')
-        .replace('{{TEAMS_IMPACTED}}', teams.map((t: string) => `- ${t}`).join('\n'))
-        .replace('{{SYSTEMS_IMPACTED}}', '- To be identified')
-        .replace('{{TIMELINE}}', '| Design | Architecture and planning | 1-2 weeks |\n| Implementation | Development and testing | 2-4 weeks |\n| Rollout | Staged deployment | 1-2 weeks |')
-        .replace('{{RISKS}}', risks.map((r: { risk: string; likelihood: string; impact: string; mitigation: string }) => 
-          `| ${r.risk} | ${r.likelihood} | ${r.impact} | ${r.mitigation} |`).join('\n'))
-        .replace('{{POSITIVE}}', positiveConsequences.map((p: string) => `- ✅ Good, because ${p.toLowerCase()}`).join('\n') || '- To be defined')
-        .replace('{{NEGATIVE}}', negativeConsequences.map((n: string) => `- ❌ Bad, because ${n.toLowerCase()}`).join('\n') || '- To be defined')
-        .replace('{{ALTERNATIVES}}', options.length > 0 ? options.join(', ') : 'None identified yet')
-        .replace('{{RELATED}}', 'None')
-        .replace('{{REFERENCES}}', '');
-
-      // Create directory and file
-      if (!fs.existsSync(adrDir)) {
-        fs.mkdirSync(adrDir, { recursive: true });
-      }
-      fs.writeFileSync(filepath, content);
-
-      // Open the file
-      const doc = await vscode.workspace.openTextDocument(filepath);
-      await vscode.window.showTextDocument(doc);
-
-      stream.markdown(`✅ **Created:** \`${filename}\`
-
-| Field | Value |
-|-------|-------|
-| Category | ${category} |
-| Priority | ${priority} |
-| Positive | ${positiveConsequences.length} items |
-| Negative | ${negativeConsequences.length} items |
-| Alternatives | ${options.length} items |
-
-The file is now open in the editor.
-`);
+      // Generate ADR
+      await generateAndSaveADR({
+        title,
+        problemStatement: problemStatement || 'To be defined',
+        decision: decision || 'To be defined',
+        category,
+        priority,
+        positive: positiveConsequences,
+        negative: negativeConsequences,
+        alternatives: options,
+        topic
+      }, adrDir, stream);
       return;
     }
 
@@ -715,6 +751,412 @@ The \`/new\` command guides you through:
 
   const participant = vscode.chat.createChatParticipant('adr-agent.adr', handler);
   context.subscriptions.push(participant);
+}
+
+// =============================================================================
+// INTERVIEW RESPONSE HANDLER
+// =============================================================================
+
+async function handleInterviewResponse(
+  state: InterviewState,
+  response: string,
+  workspaceFolder: string,
+  adrDir: string,
+  stream: vscode.ChatResponseStream
+): Promise<void> {
+  
+  switch (state.step) {
+    case 1: // Problem Statement
+      // Extract information from response
+      state.problemStatement = response;
+      
+      // Try to extract a title if not set
+      if (!state.title) {
+        // Extract first meaningful phrase as title
+        const firstLine = response.split('\n')[0].substring(0, 100);
+        state.title = extractTitle(firstLine);
+        state.category = detectCategory(state.title);
+      }
+      
+      state.step = 2;
+      setInterviewState(workspaceFolder, state);
+      
+      stream.markdown(`✅ **Problem captured!**
+
+---
+
+### [2/6] Scope and Domain
+
+Now let's define the scope:
+
+1. **What systems or components are affected?** (e.g., frontend, backend, database, APIs)
+2. **What teams need to be involved?**
+3. **What is the boundary of this decision?** (What's in scope vs out of scope?)
+
+*Type your response to continue...*
+`);
+      break;
+
+    case 2: // Scope
+      state.scope = response;
+      state.systemsAffected = extractListItems(response);
+      state.step = 3;
+      setInterviewState(workspaceFolder, state);
+      
+      // Get topic suggestions
+      const topic = detectTopic(state.title + ' ' + state.problemStatement);
+      const suggestions = topic ? TOPIC_SUGGESTIONS[topic] : null;
+      
+      stream.markdown(`✅ **Scope defined!**
+
+---
+
+### [3/6] Decision Drivers
+
+What constraints or factors are driving this decision?
+
+${suggestions ? `**Suggested drivers for ${topic} decisions:**
+${suggestions.drivers.map((d: string) => `- ${d}`).join('\n')}
+
+` : ''}Consider factors like:
+- Performance requirements
+- Cost constraints
+- Team expertise
+- Timeline
+- Compliance needs
+
+*List the key drivers for your decision...*
+`);
+      break;
+
+    case 3: // Drivers
+      state.drivers = extractListItems(response);
+      state.step = 4;
+      setInterviewState(workspaceFolder, state);
+      
+      const topicForOptions = detectTopic(state.title + ' ' + state.problemStatement);
+      const optionSuggestions = topicForOptions ? TOPIC_SUGGESTIONS[topicForOptions] : null;
+      
+      stream.markdown(`✅ **Drivers captured!**
+
+---
+
+### [4/6] Options Considered
+
+What alternatives are you considering?
+
+${optionSuggestions ? `**Common options for ${topicForOptions} decisions:**
+${optionSuggestions.options.map((o: string) => `- ${o}`).join('\n')}
+
+` : ''}For each option, briefly describe what it involves.
+
+*List the options you're evaluating...*
+`);
+      break;
+
+    case 4: // Options
+      state.options = extractListItems(response);
+      state.step = 5;
+      setInterviewState(workspaceFolder, state);
+      
+      const topicForPros = detectTopic(state.title + ' ' + state.problemStatement);
+      const proConSuggestions = topicForPros ? TOPIC_SUGGESTIONS[topicForPros] : null;
+      
+      stream.markdown(`✅ **Options captured!**
+
+---
+
+### [5/6] Pros and Cons
+
+For your **recommended option**, what are the trade-offs?
+
+${proConSuggestions ? `**Typical pros for ${topicForPros} decisions:**
+${proConSuggestions.positive.slice(0, 3).map((p: string) => `- ✅ ${p}`).join('\n')}
+
+**Typical cons:**
+${proConSuggestions.negative.slice(0, 3).map((n: string) => `- ❌ ${n}`).join('\n')}
+
+` : ''}List:
+1. **Positive consequences** (what becomes easier/better)
+2. **Negative consequences** (what becomes harder/risks)
+
+*Describe the trade-offs...*
+`);
+      break;
+
+    case 5: // Pros and Cons
+      const { positive, negative } = extractProsAndCons(response);
+      state.positive = positive;
+      state.negative = negative;
+      state.step = 6;
+      setInterviewState(workspaceFolder, state);
+      
+      stream.markdown(`✅ **Trade-offs captured!**
+
+---
+
+### [6/6] Final Recommendation
+
+Almost done! Now provide:
+
+1. **Your recommendation** - What do you recommend and why?
+2. **Priority** - High, Medium, or Low?
+
+*Type your final recommendation...*
+`);
+      break;
+
+    case 6: // Recommendation
+      state.recommendation = response;
+      state.selectedOption = extractRecommendation(response);
+      
+      // Detect priority from response
+      if (response.toLowerCase().includes('high')) {
+        state.priority = 'High';
+      } else if (response.toLowerCase().includes('low')) {
+        state.priority = 'Low';
+      } else {
+        state.priority = 'Medium';
+      }
+      
+      // Clear interview state
+      clearInterviewState(workspaceFolder);
+      
+      // Generate ADR
+      const detectedTopic = detectTopic(state.title + ' ' + state.problemStatement);
+      
+      await generateAndSaveADR({
+        title: state.title,
+        problemStatement: state.problemStatement + '\n\n' + state.scope,
+        decision: state.recommendation,
+        category: state.category,
+        priority: state.priority,
+        positive: state.positive,
+        negative: state.negative,
+        alternatives: state.options,
+        drivers: state.drivers,
+        topic: detectedTopic
+      }, adrDir, stream);
+      
+      stream.markdown(`
+
+---
+
+🎉 **Interview complete!** Your ADR has been generated and opened in the editor.
+
+Review the document and fill in any remaining details like the Architecture Diagram and Principles Alignment table.
+`);
+      break;
+
+    default:
+      clearInterviewState(workspaceFolder);
+      stream.markdown('❓ Interview state unclear. Starting fresh with `@adr /new`');
+  }
+}
+
+// =============================================================================
+// HELPER: Extract title from text
+// =============================================================================
+
+function extractTitle(text: string): string {
+  // Remove common prefixes
+  let title = text
+    .replace(/^(we need to|we want to|i want to|the problem is|problem:|issue:)/i, '')
+    .trim();
+  
+  // Capitalize first letter
+  title = title.charAt(0).toUpperCase() + title.slice(1);
+  
+  // Truncate if too long
+  if (title.length > 60) {
+    title = title.substring(0, 57) + '...';
+  }
+  
+  return title || 'Untitled Decision';
+}
+
+// =============================================================================
+// HELPER: Extract list items from text
+// =============================================================================
+
+function extractListItems(text: string): string[] {
+  const items: string[] = [];
+  
+  // Split by newlines, bullets, numbers, or commas
+  const lines = text.split(/[\n,]|(?:^|\s)[-•*]\s|(?:^|\s)\d+\.\s/);
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length > 2) {
+      items.push(trimmed);
+    }
+  }
+  
+  return items.length > 0 ? items : [text.trim()];
+}
+
+// =============================================================================
+// HELPER: Extract pros and cons from text
+// =============================================================================
+
+function extractProsAndCons(text: string): { positive: string[]; negative: string[] } {
+  const positive: string[] = [];
+  const negative: string[] = [];
+  
+  const lines = text.split('\n');
+  let currentSection: 'positive' | 'negative' | 'unknown' = 'unknown';
+  
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    const trimmed = line.trim();
+    
+    // Detect section headers
+    if (lower.includes('positive') || lower.includes('pro') || lower.includes('benefit') || lower.includes('advantage') || lower.includes('good')) {
+      currentSection = 'positive';
+      continue;
+    }
+    if (lower.includes('negative') || lower.includes('con') || lower.includes('risk') || lower.includes('disadvantage') || lower.includes('bad') || lower.includes('downside')) {
+      currentSection = 'negative';
+      continue;
+    }
+    
+    // Detect by symbols
+    if (trimmed.startsWith('+') || trimmed.startsWith('✅') || lower.startsWith('pro:')) {
+      positive.push(trimmed.replace(/^[+✅]\s*|^pro:\s*/i, ''));
+      continue;
+    }
+    if (trimmed.startsWith('-') || trimmed.startsWith('❌') || lower.startsWith('con:')) {
+      negative.push(trimmed.replace(/^[-❌]\s*|^con:\s*/i, ''));
+      continue;
+    }
+    
+    // Add to current section
+    if (trimmed.length > 2) {
+      if (currentSection === 'positive') {
+        positive.push(trimmed.replace(/^[-•*]\s*/, ''));
+      } else if (currentSection === 'negative') {
+        negative.push(trimmed.replace(/^[-•*]\s*/, ''));
+      }
+    }
+  }
+  
+  // If no clear sections, try to infer
+  if (positive.length === 0 && negative.length === 0) {
+    const items = extractListItems(text);
+    // Put first half in positive, second half in negative
+    const mid = Math.ceil(items.length / 2);
+    positive.push(...items.slice(0, mid));
+    negative.push(...items.slice(mid));
+  }
+  
+  return { positive, negative };
+}
+
+// =============================================================================
+// HELPER: Extract recommendation from text
+// =============================================================================
+
+function extractRecommendation(text: string): string {
+  // Look for "recommend", "suggest", "propose", "decision"
+  const match = text.match(/(?:recommend|suggest|propose|decision|chose|choose|selected|select|go with|using|use|adopt)[:\s]+([^.]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return text.split('\n')[0].substring(0, 100);
+}
+
+// =============================================================================
+// HELPER: Generate and save ADR
+// =============================================================================
+
+interface ADRInput {
+  title: string;
+  problemStatement: string;
+  decision: string;
+  category: string;
+  priority: string;
+  positive: string[];
+  negative: string[];
+  alternatives: string[];
+  drivers?: string[];
+  topic: string | null;
+}
+
+async function generateAndSaveADR(
+  input: ADRInput,
+  adrDir: string,
+  stream: vscode.ChatResponseStream
+): Promise<void> {
+  const nextNum = getNextAdrNumber(adrDir);
+  const date = new Date().toISOString().split('T')[0];
+  const owner = 'Ewan Peters';
+  const kebabTitle = input.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const filename = `adr-${nextNum}-${kebabTitle}.md`;
+  const filepath = path.join(adrDir, filename);
+
+  // Get topic-specific data
+  const topicData = input.topic ? TOPIC_SUGGESTIONS[input.topic] : null;
+  const teams = topicData?.teams || ['Engineering Team', 'Platform Team'];
+  const risks = topicData?.risks || [
+    { risk: 'Implementation complexity', likelihood: 'Medium', impact: 'Medium', mitigation: 'Spike/POC first' }
+  ];
+
+  const content = ADR_TEMPLATE
+    .replace('{{NUMBER}}', nextNum)
+    .replace('{{TITLE}}', input.title)
+    .replace('{{STATUS}}', 'Draft')
+    .replace('{{DATE}}', date)
+    .replace('{{OWNER}}', owner)
+    .replace('{{CATEGORY}}', input.category)
+    .replace('{{PRIORITY}}', input.priority)
+    .replace('{{CONTEXT}}', input.problemStatement)
+    .replace('{{DECISION}}', input.decision)
+    .replace('{{DIAGRAM}}', generateDiagram(input.topic, input.title))
+    .replace('{{CLOUD_FIRST}}', '✅').replace('{{CLOUD_FIRST_NOTES}}', '')
+    .replace('{{API_FIRST}}', '✅').replace('{{API_FIRST_NOTES}}', '')
+    .replace('{{SECURITY}}', '✅').replace('{{SECURITY_NOTES}}', '')
+    .replace('{{OBSERVABILITY}}', '⚠️').replace('{{OBSERVABILITY_NOTES}}', 'Review needed')
+    .replace('{{RESILIENCE}}', '⚠️').replace('{{RESILIENCE_NOTES}}', 'Review needed')
+    .replace('{{COST}}', '✅').replace('{{COST_NOTES}}', '')
+    .replace('{{TECH_STANDARDS}}', '✅').replace('{{TECH_STANDARDS_NOTES}}', '')
+    .replace('{{DATA_MGMT}}', '✅').replace('{{DATA_MGMT_NOTES}}', '')
+    .replace('{{TEAMS_IMPACTED}}', teams.map((t: string) => `- ${t}`).join('\n'))
+    .replace('{{SYSTEMS_IMPACTED}}', '- To be identified')
+    .replace('{{TIMELINE}}', '| Design | Architecture and planning | 1-2 weeks |\n| Implementation | Development and testing | 2-4 weeks |\n| Rollout | Staged deployment | 1-2 weeks |')
+    .replace('{{RISKS}}', risks.map((r: { risk: string; likelihood: string; impact: string; mitigation: string }) => 
+      `| ${r.risk} | ${r.likelihood} | ${r.impact} | ${r.mitigation} |`).join('\n'))
+    .replace('{{POSITIVE}}', input.positive.length > 0 
+      ? input.positive.map((p: string) => `- ✅ Good, because ${p.toLowerCase()}`).join('\n') 
+      : '- To be defined')
+    .replace('{{NEGATIVE}}', input.negative.length > 0 
+      ? input.negative.map((n: string) => `- ❌ Bad, because ${n.toLowerCase()}`).join('\n') 
+      : '- To be defined')
+    .replace('{{ALTERNATIVES}}', input.alternatives.length > 0 ? input.alternatives.join(', ') : 'None identified yet')
+    .replace('{{RELATED}}', 'None')
+    .replace('{{REFERENCES}}', '');
+
+  // Create directory and file
+  if (!fs.existsSync(adrDir)) {
+    fs.mkdirSync(adrDir, { recursive: true });
+  }
+  fs.writeFileSync(filepath, content);
+
+  // Open the file
+  const doc = await vscode.workspace.openTextDocument(filepath);
+  await vscode.window.showTextDocument(doc);
+
+  stream.markdown(`✅ **Created:** \`${filename}\`
+
+| Field | Value |
+|-------|-------|
+| Category | ${input.category} |
+| Priority | ${input.priority} |
+| Positive | ${input.positive.length} items |
+| Negative | ${input.negative.length} items |
+| Alternatives | ${input.alternatives.length} items |
+
+The file is now open in the editor.
+`);
 }
 
 export function deactivate() {}
