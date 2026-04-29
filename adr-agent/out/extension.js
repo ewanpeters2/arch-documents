@@ -32,7 +32,8 @@ function createEmptyInterviewState() {
         negative: [],
         recommendation: '',
         priority: 'Medium',
-        category: 'Other'
+        category: 'Other',
+        repos: []
     };
 }
 // =============================================================================
@@ -117,6 +118,12 @@ const ADR_TEMPLATE = `# ADR-{{NUMBER}}: {{TITLE}}
 ## Related Decisions
 <!-- List any related ADRs -->
 {{RELATED}}
+
+## Related Repositories
+<!-- GitHub repositories relevant to this decision for code review and context -->
+| Repository | Purpose | Key Files/Folders |
+|------------|---------|-------------------|
+{{REPOS}}
 
 ## References
 <!-- Links to relevant documentation, diagrams, etc. -->
@@ -963,6 +970,9 @@ async function generateAndSaveADR(input, adrDir, stream) {
         : '- To be defined')
         .replace('{{ALTERNATIVES}}', input.alternatives.length > 0 ? input.alternatives.join(', ') : 'None identified yet')
         .replace('{{RELATED}}', 'None')
+        .replace('{{REPOS}}', input.repos && input.repos.length > 0
+        ? input.repos.map((r) => `| [${r.repo}](https://github.com/${r.repo}) | ${r.purpose} | ${r.keyFiles} |`).join('\n')
+        : '| None specified | - | - |')
         .replace('{{REFERENCES}}', '');
     // Create directory and file
     if (!fs.existsSync(adrDir)) {
@@ -1039,6 +1049,12 @@ const TA_TEMPLATE = `# TA-{{NUMBER}}: {{TITLE}}
 ## Next Steps
 {{NEXT_STEPS}}
 
+## Related Repositories
+<!-- GitHub repositories relevant to this assessment for code review and context -->
+| Repository | Purpose | Key Files/Folders |
+|------------|---------|-------------------|
+{{REPOS}}
+
 ## References
 {{REFERENCES}}
 `;
@@ -1066,7 +1082,8 @@ function createEmptyTAInterviewState() {
         impacts: [],
         risks: [],
         priority: 'Medium',
-        category: 'Other'
+        category: 'Other',
+        repos: []
     };
 }
 // =============================================================================
@@ -1114,7 +1131,7 @@ I'll guide you through creating a Tech Assessment step by step.
 
 ---
 
-### [1/5] Problem Description
+### [1/6] Problem Description
 
 Please describe:
 
@@ -1214,11 +1231,12 @@ ${taList.map((t, i) => `| ${i + 1} | ${t.title} | ${t.status} |`).join('\n')}
 ### Guided Interview Flow
 
 The \`/new\` command guides you through:
-1. **[1/5] Problem Description** - What needs to be assessed?
-2. **[2/5] High Level Analysis** - Current state and proposed solution
-3. **[3/5] Identified Impacts** - What components are affected?
-4. **[4/5] Risks and Challenges** - What could go wrong?
-5. **[5/5] Priority and Next Steps** - How urgent and what's next?
+1. **[1/6] Problem Description** - What needs to be assessed?
+2. **[2/6] High Level Analysis** - Current state and proposed solution
+3. **[3/6] Identified Impacts** - What components are affected?
+4. **[4/6] Risks and Challenges** - What could go wrong?
+5. **[5/6] Related Repositories** - GitHub repos for code review
+6. **[6/6] Priority and Next Steps** - How urgent and what's next?
 `);
     };
 }
@@ -1240,7 +1258,7 @@ async function handleTAInterviewResponse(state, response, workspaceFolder, taDir
 
 ---
 
-### [2/5] High Level Analysis
+### [2/6] High Level Analysis
 
 Please describe:
 
@@ -1264,7 +1282,7 @@ Please describe:
 
 ---
 
-### [3/5] Identified Impacts
+### [3/6] Identified Impacts
 
 What components or systems will be affected?
 
@@ -1284,7 +1302,7 @@ For each impact, describe:
 
 ---
 
-### [4/5] Risks and Challenges
+### [4/6] Risks and Challenges
 
 What could go wrong? For each risk:
 
@@ -1303,7 +1321,30 @@ What could go wrong? For each risk:
 
 ---
 
-### [5/5] Priority and Next Steps
+### [5/6] Related Repositories
+
+List any GitHub repositories that should be reviewed for context.
+
+Format: \`owner/repo-name\` - purpose - key files/folders
+
+**Examples:**
+- \`myorg/backend-api\` - Main API code - \`src/services/\`
+- \`myorg/shared-utils\` - Shared utilities - \`lib/\`
+
+*List the repos (or type "none" to skip)...*
+`);
+            break;
+        case 5: // Related Repositories
+            if (!response.toLowerCase().includes('none') && response.trim().length > 0) {
+                state.repos = extractRepos(response);
+            }
+            state.step = 6;
+            setTAInterviewState(workspaceFolder, state);
+            stream.markdown(`✅ **Repos captured!**
+
+---
+
+### [6/6] Priority and Next Steps
 
 Almost done! Please provide:
 
@@ -1313,7 +1354,7 @@ Almost done! Please provide:
 *Type your response...*
 `);
             break;
-        case 5: // Priority and Next Steps
+        case 6: // Priority and Next Steps
             if (response.toLowerCase().includes('high')) {
                 state.priority = 'High';
             }
@@ -1337,7 +1378,8 @@ Almost done! Please provide:
                 technicalApproach: state.technicalApproach,
                 dependencies: state.dependencies,
                 constraints: state.constraints,
-                nextSteps: response
+                nextSteps: response,
+                repos: state.repos
             }, taDir, stream);
             stream.markdown(`
 
@@ -1401,6 +1443,38 @@ function extractRisks(text) {
     }
     return risks.length > 0 ? risks : [{ risk: 'To be identified', description: '', mitigation: 'To be defined' }];
 }
+// =============================================================================
+// HELPER: Extract repos from text
+// =============================================================================
+function extractRepos(text) {
+    const repos = [];
+    const lines = text.split('\n');
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length > 2) {
+            // Try to extract owner/repo format
+            const repoMatch = trimmed.match(/([a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+)/);
+            if (repoMatch) {
+                const parts = trimmed.replace(/^[-•*]\s*/, '').split(/[,:|]/).map(p => p.trim());
+                repos.push({
+                    repo: repoMatch[1],
+                    purpose: parts[1] || 'Code review',
+                    keyFiles: parts[2] || 'src/'
+                });
+            }
+            else if (trimmed.includes('/')) {
+                // Fallback for other formats
+                const parts = trimmed.replace(/^[-•*]\s*/, '').split(/[,:|]/).map(p => p.trim());
+                repos.push({
+                    repo: parts[0] || trimmed,
+                    purpose: parts[1] || 'Code review',
+                    keyFiles: parts[2] || 'src/'
+                });
+            }
+        }
+    }
+    return repos;
+}
 async function generateAndSaveTA(input, taDir, stream) {
     const nextNum = getNextTANumber(taDir);
     const date = new Date().toISOString().split('T')[0];
@@ -1435,6 +1509,9 @@ async function generateAndSaveTA(input, taDir, stream) {
         .replace('{{NEXT_STEPS}}', input.nextSteps
         ? input.nextSteps.split('\n').map(s => `- [ ] ${s.trim()}`).join('\n')
         : '- [ ] To be defined')
+        .replace('{{REPOS}}', input.repos && input.repos.length > 0
+        ? input.repos.map(r => `| [${r.repo}](https://github.com/${r.repo}) | ${r.purpose} | ${r.keyFiles} |`).join('\n')
+        : '| None specified | - | - |')
         .replace('{{REFERENCES}}', '- To be added');
     // Create directory and file
     if (!fs.existsSync(taDir)) {

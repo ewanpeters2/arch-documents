@@ -2,7 +2,7 @@
   "name": "adr-agent",
   "displayName": "ADR & TA Agent",
   "description": "Create Architecture Decision Records and Tech Assessments with guided interview and AI assistance",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "ewan-peters",
   "license": "MIT",
   "engines": {
@@ -53,7 +53,7 @@
         "commands": [
           {
             "name": "new",
-            "description": "Start guided TA interview (5 steps with multi-turn conversation)"
+            "description": "Start guided TA interview (6 steps including repos)"
           },
           {
             "name": "quick",

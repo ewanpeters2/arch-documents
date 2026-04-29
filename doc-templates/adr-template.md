@@ -96,6 +96,13 @@
 
 <!-- Delete rows that are not relevant to this ADR -->
 
+## Related Repositories
+<!-- GitHub repositories relevant to this decision for code review and context -->
+| Repository | Purpose | Key Files/Folders |
+|------------|---------|-------------------|
+| {{REPO_1}} | {{REPO_PURPOSE_1}} | {{KEY_FILES_1}} |
+| {{REPO_2}} | {{REPO_PURPOSE_2}} | {{KEY_FILES_2}} |
+
 ## References
 <!-- Links to relevant documentation, diagrams, etc. -->
 {{REFERENCES}}

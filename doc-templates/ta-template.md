@@ -64,6 +64,13 @@
 - [ ] {{NEXT_STEP_2}}
 - [ ] {{NEXT_STEP_3}}
 
+## Related Repositories
+<!-- GitHub repositories relevant to this assessment for code review and context -->
+| Repository | Purpose | Key Files/Folders |
+|------------|---------|-------------------|
+| {{REPO_1}} | {{REPO_PURPOSE_1}} | {{KEY_FILES_1}} |
+| {{REPO_2}} | {{REPO_PURPOSE_2}} | {{KEY_FILES_2}} |
+
 ## References
 <!-- Links to relevant documentation, diagrams, tickets, etc. -->
 - {{REFERENCE_1}}
