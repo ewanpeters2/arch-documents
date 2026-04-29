@@ -2,7 +2,7 @@
   "name": "adr-agent",
   "displayName": "ADR & TA Agent",
   "description": "Create Architecture Decision Records and Tech Assessments with guided interview and AI assistance",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "ewan-peters",
   "license": "MIT",
   "engines": {
@@ -66,6 +66,10 @@
           {
             "name": "list",
             "description": "List existing Tech Assessments with status"
+          },
+          {
+            "name": "repos",
+            "description": "Show repository catalog from repos.md"
           }
         ]
       }

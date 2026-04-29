@@ -1100,6 +1100,55 @@ function getNextTANumber(taDir) {
     const max = Math.max(0, ...numbers);
     return String(max + 1).padStart(3, '0');
 }
+function loadReposCatalog(workspaceFolder) {
+    const reposFile = path.join(workspaceFolder, 'doc-templates', 'repos.md');
+    if (!fs.existsSync(reposFile)) {
+        return [];
+    }
+    const content = fs.readFileSync(reposFile, 'utf-8');
+    const repos = [];
+    let currentCategory = 'General';
+    const lines = content.split('\n');
+    for (const line of lines) {
+        // Detect category headers (## Category Name)
+        const categoryMatch = line.match(/^##\s+(.+)$/);
+        if (categoryMatch && !categoryMatch[1].includes('Format') && !categoryMatch[1].includes('How to')) {
+            currentCategory = categoryMatch[1].trim();
+            continue;
+        }
+        // Parse table rows: | owner/repo | purpose | key files |
+        const tableMatch = line.match(/^\|\s*([a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/);
+        if (tableMatch) {
+            repos.push({
+                repo: tableMatch[1].trim(),
+                purpose: tableMatch[2].trim(),
+                keyFiles: tableMatch[3].trim().replace(/`/g, ''),
+                category: currentCategory
+            });
+        }
+    }
+    return repos;
+}
+function formatReposCatalogForDisplay(repos) {
+    if (repos.length === 0) {
+        return 'No repos.md catalog found.';
+    }
+    const byCategory = {};
+    for (const repo of repos) {
+        if (!byCategory[repo.category]) {
+            byCategory[repo.category] = [];
+        }
+        byCategory[repo.category].push(repo);
+    }
+    let output = '';
+    for (const [category, categoryRepos] of Object.entries(byCategory)) {
+        output += `\n**${category}**\n`;
+        for (const r of categoryRepos) {
+            output += `- \`${r.repo}\` - ${r.purpose}\n`;
+        }
+    }
+    return output;
+}
 // =============================================================================
 // TA CHAT PARTICIPANT HANDLER
 // =============================================================================
@@ -1211,20 +1260,73 @@ ${taList.map((t, i) => `| ${i + 1} | ${t.title} | ${t.status} |`).join('\n')}
 `);
             return;
         }
+        // COMMAND: /repos - Show repos catalog
+        if (request.command === 'repos') {
+            const catalog = loadReposCatalog(workspaceFolder);
+            if (catalog.length === 0) {
+                stream.markdown(`## 📚 Repository Catalog
+
+No \`repos.md\` file found. Create one at:
+
+\`doc-templates/repos.md\`
+
+**Example format:**
+\`\`\`markdown
+## Core Services
+
+| Repository | Purpose | Key Files/Folders |
+|------------|---------|-------------------|
+| myorg/backend-api | Main API service | \`src/services/\` |
+| myorg/frontend-app | React frontend | \`src/components/\` |
+\`\`\`
+
+This catalog will be offered as suggestions when adding repos to TAs and ADRs.
+`);
+                return;
+            }
+            // Group by category
+            const byCategory = {};
+            for (const repo of catalog) {
+                if (!byCategory[repo.category]) {
+                    byCategory[repo.category] = [];
+                }
+                byCategory[repo.category].push(repo);
+            }
+            let output = `## 📚 Repository Catalog
+
+**Source:** \`doc-templates/repos.md\`
+
+`;
+            for (const [category, repos] of Object.entries(byCategory)) {
+                output += `### ${category}\n`;
+                output += `| Repository | Purpose | Key Files |\n`;
+                output += `|------------|---------|----------|\n`;
+                for (const r of repos) {
+                    output += `| [\`${r.repo}\`](https://github.com/${r.repo}) | ${r.purpose} | \`${r.keyFiles}\` |\n`;
+                }
+                output += '\n';
+            }
+            output += `\n**Total:** ${catalog.length} repos in catalog\n`;
+            output += `\n💡 During TA/ADR interviews, type \`all\` to include all repos, or reference specific repos by name.`;
+            stream.markdown(output);
+            return;
+        }
         // DEFAULT: Show help
         stream.markdown(`## 📋 TA Agent
 
 | Command | Description |
 |---------|-------------|
-| \`@ta /new\` | Start guided TA interview (5 steps) |
+| \`@ta /new\` | Start guided TA interview (6 steps) |
 | \`@ta /quick [title]\` | Quick TA creation with prompts |
 | \`@ta /cancel\` | Cancel current interview |
 | \`@ta /list\` | List existing Tech Assessments |
+| \`@ta /repos\` | Show repository catalog |
 
 ### Examples
 \`\`\`
 @ta /new
 @ta /quick Evaluate New Caching Solution
+@ta /repos
 @ta /list
 \`\`\`
 
@@ -1235,8 +1337,12 @@ The \`/new\` command guides you through:
 2. **[2/6] High Level Analysis** - Current state and proposed solution
 3. **[3/6] Identified Impacts** - What components are affected?
 4. **[4/6] Risks and Challenges** - What could go wrong?
-5. **[5/6] Related Repositories** - GitHub repos for code review
+5. **[5/6] Related Repositories** - GitHub repos for code review (from catalog)
 6. **[6/6] Priority and Next Steps** - How urgent and what's next?
+
+### Repository Catalog
+
+Create \`doc-templates/repos.md\` to maintain a list of repos that will be suggested during interviews.
 `);
     };
 }
@@ -1317,6 +1423,11 @@ What could go wrong? For each risk:
             state.risks = extractRisks(response);
             state.step = 5;
             setTAInterviewState(workspaceFolder, state);
+            // Load repos catalog
+            const reposCatalog = loadReposCatalog(workspaceFolder);
+            const catalogDisplay = reposCatalog.length > 0
+                ? `\n📚 **Available from repos.md catalog:**\n${formatReposCatalogForDisplay(reposCatalog)}\n`
+                : '';
             stream.markdown(`✅ **Risks captured!**
 
 ---
@@ -1324,23 +1435,52 @@ What could go wrong? For each risk:
 ### [5/6] Related Repositories
 
 List any GitHub repositories that should be reviewed for context.
+${catalogDisplay}
+**To add repos, either:**
+- Type repo names from the catalog above (e.g., \`ewanpeters2/backend-api\`)
+- Add new repos in format: \`owner/repo\` - purpose - key files
+- Type \`all\` to include all repos from the catalog
+- Type \`none\` to skip
 
-Format: \`owner/repo-name\` - purpose - key files/folders
-
-**Examples:**
-- \`myorg/backend-api\` - Main API code - \`src/services/\`
-- \`myorg/shared-utils\` - Shared utilities - \`lib/\`
-
-*List the repos (or type "none" to skip)...*
+*List the repos...*
 `);
             break;
         case 5: // Related Repositories
-            if (!response.toLowerCase().includes('none') && response.trim().length > 0) {
-                state.repos = extractRepos(response);
+            const catalog = loadReposCatalog(workspaceFolder);
+            if (response.toLowerCase().trim() === 'all' && catalog.length > 0) {
+                // Use all repos from catalog
+                state.repos = catalog.map(r => ({
+                    repo: r.repo,
+                    purpose: r.purpose,
+                    keyFiles: r.keyFiles
+                }));
+            }
+            else if (!response.toLowerCase().includes('none') && response.trim().length > 0) {
+                // Check if response references catalog repos by name
+                const mentionedRepos = [];
+                for (const catalogRepo of catalog) {
+                    if (response.toLowerCase().includes(catalogRepo.repo.toLowerCase())) {
+                        mentionedRepos.push({
+                            repo: catalogRepo.repo,
+                            purpose: catalogRepo.purpose,
+                            keyFiles: catalogRepo.keyFiles
+                        });
+                    }
+                }
+                // Also extract any manually specified repos
+                const manualRepos = extractRepos(response);
+                // Merge, avoiding duplicates
+                const allRepos = [...mentionedRepos];
+                for (const manual of manualRepos) {
+                    if (!allRepos.find(r => r.repo.toLowerCase() === manual.repo.toLowerCase())) {
+                        allRepos.push(manual);
+                    }
+                }
+                state.repos = allRepos.length > 0 ? allRepos : [];
             }
             state.step = 6;
             setTAInterviewState(workspaceFolder, state);
-            stream.markdown(`✅ **Repos captured!**
+            stream.markdown(`✅ **Repos captured!** (${state.repos.length} repos)
 
 ---
 
