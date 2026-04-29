@@ -10,11 +10,11 @@ Each repo should be listed with: `owner/repo` | Purpose | Key Files/Folders
 
 ## Core Services
 
-| Repository | Purpose | Key Files/Folders |
+| Name | Location | Purpose |
 |------------|---------|-------------------|
-| ewanpeters2/backend-api | Main backend API service | `src/services/`, `src/controllers/` |
-| ewanpeters2/frontend-app | React frontend application | `src/components/`, `src/hooks/` |
-| ewanpeters2/shared-utils | Shared utilities and helpers | `lib/`, `utils/` |
+|  | Main backend API service | `src/services/`, `src/controllers/` |
+|  | React frontend application | `src/components/`, `src/hooks/` |
+|  | Shared utilities and helpers | `lib/`, `utils/` |
 
 ## Infrastructure
 
