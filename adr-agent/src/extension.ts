@@ -751,6 +751,11 @@ The \`/new\` command guides you through:
 
   const participant = vscode.chat.createChatParticipant('adr-agent.adr', handler);
   context.subscriptions.push(participant);
+
+  // Register TA Chat Participant
+  const taHandler = createTAHandler();
+  const taParticipant = vscode.chat.createChatParticipant('adr-agent.ta', taHandler);
+  context.subscriptions.push(taParticipant);
 }
 
 // =============================================================================
@@ -1154,6 +1159,594 @@ async function generateAndSaveADR(
 | Positive | ${input.positive.length} items |
 | Negative | ${input.negative.length} items |
 | Alternatives | ${input.alternatives.length} items |
+
+The file is now open in the editor.
+`);
+}
+
+// =============================================================================
+// TA TEMPLATE
+// =============================================================================
+
+const TA_TEMPLATE = `# TA-{{NUMBER}}: {{TITLE}}
+
+## Metadata
+
+| Field | Value |
+|-------|-------|
+| **Status** | {{STATUS}} |
+| **Date** | {{DATE}} |
+| **Owner** | {{OWNER}} |
+| **Category** | {{CATEGORY}} |
+| **Priority** | {{PRIORITY}} |
+
+## Problem Description
+{{PROBLEM_DESCRIPTION}}
+
+## Assumptions
+| Assumption | Impact |
+|------------|--------|
+{{ASSUMPTIONS}}
+
+## High Level Analysis
+| What | Details |
+|------|---------|
+| Current State | {{CURRENT_STATE}} |
+| Proposed Solution | {{PROPOSED_SOLUTION}} |
+| Technical Approach | {{TECHNICAL_APPROACH}} |
+| Dependencies | {{DEPENDENCIES}} |
+| Constraints | {{CONSTRAINTS}} |
+
+## Identified Impacts
+| Component | Impact | Description |
+|-----------|--------|-------------|
+{{IMPACTS}}
+
+## Risks and Challenges
+| Risk | Description | Mitigation Plan |
+|------|-------------|-----------------|
+{{RISKS}}
+
+## Effort Estimation
+| Phase | Estimate | Notes |
+|-------|----------|-------|
+| Analysis | {{ANALYSIS_ESTIMATE}} | |
+| Development | {{DEV_ESTIMATE}} | |
+| Testing | {{TEST_ESTIMATE}} | |
+| Deployment | {{DEPLOY_ESTIMATE}} | |
+| **Total** | {{TOTAL_ESTIMATE}} | |
+
+## Next Steps
+{{NEXT_STEPS}}
+
+## References
+{{REFERENCES}}
+`;
+
+// =============================================================================
+// TA INTERVIEW STATE MANAGEMENT
+// =============================================================================
+
+interface TAInterviewState {
+  step: number;
+  title: string;
+  problemDescription: string;
+  assumptions: string[];
+  currentState: string;
+  proposedSolution: string;
+  technicalApproach: string;
+  dependencies: string;
+  constraints: string;
+  impacts: Array<{ component: string; impact: string; description: string }>;
+  risks: Array<{ risk: string; description: string; mitigation: string }>;
+  priority: string;
+  category: string;
+}
+
+const taInterviewStates: Map<string, TAInterviewState> = new Map();
+
+function getTAInterviewState(workspaceFolder: string): TAInterviewState | undefined {
+  return taInterviewStates.get(workspaceFolder);
+}
+
+function setTAInterviewState(workspaceFolder: string, state: TAInterviewState): void {
+  taInterviewStates.set(workspaceFolder, state);
+}
+
+function clearTAInterviewState(workspaceFolder: string): void {
+  taInterviewStates.delete(workspaceFolder);
+}
+
+function createEmptyTAInterviewState(): TAInterviewState {
+  return {
+    step: 1,
+    title: '',
+    problemDescription: '',
+    assumptions: [],
+    currentState: '',
+    proposedSolution: '',
+    technicalApproach: '',
+    dependencies: '',
+    constraints: '',
+    impacts: [],
+    risks: [],
+    priority: 'Medium',
+    category: 'Other'
+  };
+}
+
+// =============================================================================
+// TA HELPER FUNCTIONS
+// =============================================================================
+
+function getNextTANumber(taDir: string): string {
+  if (!fs.existsSync(taDir)) {
+    return '001';
+  }
+  const files = fs.readdirSync(taDir);
+  const numbers = files
+    .filter((f: string) => f.match(/^ta-\d{3}/))
+    .map((f: string) => parseInt(f.match(/^ta-(\d{3})/)?.[1] || '0', 10));
+  const max = Math.max(0, ...numbers);
+  return String(max + 1).padStart(3, '0');
+}
+
+// =============================================================================
+// TA CHAT PARTICIPANT HANDLER
+// =============================================================================
+
+function createTAHandler(): vscode.ChatRequestHandler {
+  return async (
+    request: vscode.ChatRequest,
+    chatContext: vscode.ChatContext,
+    stream: vscode.ChatResponseStream,
+    token: vscode.CancellationToken
+  ) => {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspaceFolder) {
+      stream.markdown('❌ Please open a workspace folder first.');
+      return;
+    }
+
+    const taDir = path.join(workspaceFolder, 'ta-docs');
+
+    // Check for active interview and handle follow-up responses
+    const currentState = getTAInterviewState(workspaceFolder);
+    
+    if (currentState && !request.command && request.prompt) {
+      await handleTAInterviewResponse(currentState, request.prompt, workspaceFolder, taDir, stream);
+      return;
+    }
+
+    // COMMAND: /new - Start Guided TA Interview
+    if (request.command === 'new') {
+      const newState = createEmptyTAInterviewState();
+      
+      if (request.prompt) {
+        newState.title = request.prompt;
+        newState.category = detectCategory(request.prompt);
+      }
+      
+      setTAInterviewState(workspaceFolder, newState);
+      
+      stream.markdown(`## 📋 New Tech Assessment - Guided Interview
+
+I'll guide you through creating a Tech Assessment step by step.
+
+---
+
+### [1/5] Problem Description
+
+Please describe:
+
+1. **What is the problem or opportunity?**
+2. **Why does this need to be assessed now?**
+3. **What is the business impact?**
+
+*Just type your answers naturally, and I'll extract the key information.*
+
+---
+
+💡 **Tips:**
+- Type \`@ta /cancel\` to cancel the interview
+- Type \`@ta /quick [title]\` for faster TA creation
+`);
+      return;
+    }
+
+    // COMMAND: /cancel - Cancel Interview
+    if (request.command === 'cancel') {
+      clearTAInterviewState(workspaceFolder);
+      stream.markdown('🛑 **Interview cancelled.** Start a new one with `@ta /new`');
+      return;
+    }
+
+    // COMMAND: /quick - Quick TA Creation
+    if (request.command === 'quick') {
+      const title = request.prompt || 'Untitled Assessment';
+      const category = detectCategory(title);
+      
+      const priority = await vscode.window.showQuickPick(
+        ['High', 'Medium', 'Low'],
+        { placeHolder: '🎯 Select priority' }
+      );
+      if (!priority) return;
+
+      const problemDescription = await vscode.window.showInputBox({
+        prompt: '📝 What is the problem or opportunity?',
+        placeHolder: 'e.g., We need to evaluate options for...'
+      });
+
+      const proposedSolution = await vscode.window.showInputBox({
+        prompt: '💡 What is the proposed solution?',
+        placeHolder: 'e.g., Implement a new caching layer...'
+      });
+
+      await generateAndSaveTA({
+        title,
+        problemDescription: problemDescription || 'To be defined',
+        proposedSolution: proposedSolution || 'To be defined',
+        category,
+        priority,
+        assumptions: [],
+        impacts: [],
+        risks: []
+      }, taDir, stream);
+      return;
+    }
+
+    // COMMAND: /list - List TAs
+    if (request.command === 'list') {
+      if (!fs.existsSync(taDir)) {
+        stream.markdown('📭 No Tech Assessments found. Create one with `@ta /new` or `@ta /quick [title]`');
+        return;
+      }
+      
+      const files = fs.readdirSync(taDir)
+        .filter((f: string) => f.startsWith('ta-') && f.endsWith('.md'))
+        .sort();
+      
+      const taList = files.map((f: string) => {
+        const content = fs.readFileSync(path.join(taDir, f), 'utf-8');
+        const titleMatch = content.match(/^# TA-\d+: (.+)$/m);
+        const statusMatch = content.match(/\*\*Status\*\*\s*\|\s*([^|]+)/);
+        return {
+          file: f,
+          title: titleMatch?.[1] || f,
+          status: statusMatch?.[1]?.trim() || 'Unknown'
+        };
+      });
+
+      stream.markdown(`## 📋 Existing Tech Assessments
+
+| # | Title | Status |
+|---|-------|--------|
+${taList.map((t: { file: string; title: string; status: string }, i: number) => 
+  `| ${i + 1} | ${t.title} | ${t.status} |`).join('\n')}
+
+**Total:** ${files.length} TAs
+`);
+      return;
+    }
+
+    // DEFAULT: Show help
+    stream.markdown(`## 📋 TA Agent
+
+| Command | Description |
+|---------|-------------|
+| \`@ta /new\` | Start guided TA interview (5 steps) |
+| \`@ta /quick [title]\` | Quick TA creation with prompts |
+| \`@ta /cancel\` | Cancel current interview |
+| \`@ta /list\` | List existing Tech Assessments |
+
+### Examples
+\`\`\`
+@ta /new
+@ta /quick Evaluate New Caching Solution
+@ta /list
+\`\`\`
+
+### Guided Interview Flow
+
+The \`/new\` command guides you through:
+1. **[1/5] Problem Description** - What needs to be assessed?
+2. **[2/5] High Level Analysis** - Current state and proposed solution
+3. **[3/5] Identified Impacts** - What components are affected?
+4. **[4/5] Risks and Challenges** - What could go wrong?
+5. **[5/5] Priority and Next Steps** - How urgent and what's next?
+`);
+  };
+}
+
+// =============================================================================
+// TA INTERVIEW RESPONSE HANDLER
+// =============================================================================
+
+async function handleTAInterviewResponse(
+  state: TAInterviewState,
+  response: string,
+  workspaceFolder: string,
+  taDir: string,
+  stream: vscode.ChatResponseStream
+): Promise<void> {
+  
+  switch (state.step) {
+    case 1: // Problem Description
+      state.problemDescription = response;
+      
+      if (!state.title) {
+        const firstLine = response.split('\n')[0].substring(0, 100);
+        state.title = extractTitle(firstLine);
+        state.category = detectCategory(state.title);
+      }
+      
+      state.step = 2;
+      setTAInterviewState(workspaceFolder, state);
+      
+      stream.markdown(`✅ **Problem captured!**
+
+---
+
+### [2/5] High Level Analysis
+
+Please describe:
+
+1. **Current State** - What exists today?
+2. **Proposed Solution** - What do you recommend?
+3. **Technical Approach** - How would it be implemented?
+4. **Dependencies** - What does this depend on?
+5. **Constraints** - What limitations exist?
+
+*Type your analysis...*
+`);
+      break;
+
+    case 2: // High Level Analysis
+      // Extract analysis components
+      state.currentState = response;
+      state.proposedSolution = response;
+      state.technicalApproach = response;
+      
+      state.step = 3;
+      setTAInterviewState(workspaceFolder, state);
+      
+      stream.markdown(`✅ **Analysis captured!**
+
+---
+
+### [3/5] Identified Impacts
+
+What components or systems will be affected?
+
+For each impact, describe:
+- **Component** (e.g., Frontend, Backend, Database)
+- **Impact level** (High, Medium, Low)
+- **Description** of the impact
+
+*List the impacts...*
+`);
+      break;
+
+    case 3: // Impacts
+      state.impacts = extractImpacts(response);
+      state.step = 4;
+      setTAInterviewState(workspaceFolder, state);
+      
+      stream.markdown(`✅ **Impacts captured!**
+
+---
+
+### [4/5] Risks and Challenges
+
+What could go wrong? For each risk:
+
+- **Risk** - What is the risk?
+- **Description** - More details
+- **Mitigation Plan** - How to address it
+
+*List the risks...*
+`);
+      break;
+
+    case 4: // Risks
+      state.risks = extractRisks(response);
+      state.step = 5;
+      setTAInterviewState(workspaceFolder, state);
+      
+      stream.markdown(`✅ **Risks captured!**
+
+---
+
+### [5/5] Priority and Next Steps
+
+Almost done! Please provide:
+
+1. **Priority** - High, Medium, or Low?
+2. **Next Steps** - What should happen next?
+
+*Type your response...*
+`);
+      break;
+
+    case 5: // Priority and Next Steps
+      if (response.toLowerCase().includes('high')) {
+        state.priority = 'High';
+      } else if (response.toLowerCase().includes('low')) {
+        state.priority = 'Low';
+      } else {
+        state.priority = 'Medium';
+      }
+      
+      clearTAInterviewState(workspaceFolder);
+      
+      await generateAndSaveTA({
+        title: state.title,
+        problemDescription: state.problemDescription,
+        proposedSolution: state.proposedSolution,
+        category: state.category,
+        priority: state.priority,
+        assumptions: state.assumptions,
+        impacts: state.impacts,
+        risks: state.risks,
+        currentState: state.currentState,
+        technicalApproach: state.technicalApproach,
+        dependencies: state.dependencies,
+        constraints: state.constraints,
+        nextSteps: response
+      }, taDir, stream);
+      
+      stream.markdown(`
+
+---
+
+🎉 **Interview complete!** Your Tech Assessment has been generated and opened in the editor.
+
+Review the document and fill in any remaining details.
+`);
+      break;
+
+    default:
+      clearTAInterviewState(workspaceFolder);
+      stream.markdown('❓ Interview state unclear. Starting fresh with `@ta /new`');
+  }
+}
+
+// =============================================================================
+// HELPER: Extract impacts from text
+// =============================================================================
+
+function extractImpacts(text: string): Array<{ component: string; impact: string; description: string }> {
+  const impacts: Array<{ component: string; impact: string; description: string }> = [];
+  const lines = text.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length > 2) {
+      // Try to extract component, impact level, description
+      const parts = trimmed.replace(/^[-•*]\s*/, '').split(/[,:|]/).map(p => p.trim());
+      if (parts.length >= 2) {
+        impacts.push({
+          component: parts[0] || 'Component',
+          impact: parts[1]?.match(/high|medium|low/i)?.[0] || 'Medium',
+          description: parts.slice(2).join(', ') || parts[1] || ''
+        });
+      } else {
+        impacts.push({
+          component: trimmed,
+          impact: 'Medium',
+          description: ''
+        });
+      }
+    }
+  }
+  
+  return impacts.length > 0 ? impacts : [{ component: 'To be identified', impact: 'Medium', description: '' }];
+}
+
+// =============================================================================
+// HELPER: Extract risks from text
+// =============================================================================
+
+function extractRisks(text: string): Array<{ risk: string; description: string; mitigation: string }> {
+  const risks: Array<{ risk: string; description: string; mitigation: string }> = [];
+  const lines = text.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length > 2) {
+      const parts = trimmed.replace(/^[-•*]\s*/, '').split(/[,:|]/).map(p => p.trim());
+      risks.push({
+        risk: parts[0] || 'Risk',
+        description: parts[1] || '',
+        mitigation: parts[2] || 'To be defined'
+      });
+    }
+  }
+  
+  return risks.length > 0 ? risks : [{ risk: 'To be identified', description: '', mitigation: 'To be defined' }];
+}
+
+// =============================================================================
+// HELPER: Generate and save TA
+// =============================================================================
+
+interface TAInput {
+  title: string;
+  problemDescription: string;
+  proposedSolution: string;
+  category: string;
+  priority: string;
+  assumptions: string[];
+  impacts: Array<{ component: string; impact: string; description: string }>;
+  risks: Array<{ risk: string; description: string; mitigation: string }>;
+  currentState?: string;
+  technicalApproach?: string;
+  dependencies?: string;
+  constraints?: string;
+  nextSteps?: string;
+}
+
+async function generateAndSaveTA(
+  input: TAInput,
+  taDir: string,
+  stream: vscode.ChatResponseStream
+): Promise<void> {
+  const nextNum = getNextTANumber(taDir);
+  const date = new Date().toISOString().split('T')[0];
+  const owner = 'Ewan Peters';
+  const kebabTitle = input.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const filename = `ta-${nextNum}-${kebabTitle}.md`;
+  const filepath = path.join(taDir, filename);
+
+  const content = TA_TEMPLATE
+    .replace('{{NUMBER}}', nextNum)
+    .replace('{{TITLE}}', input.title)
+    .replace('{{STATUS}}', 'Draft')
+    .replace('{{DATE}}', date)
+    .replace('{{OWNER}}', owner)
+    .replace('{{CATEGORY}}', input.category)
+    .replace('{{PRIORITY}}', input.priority)
+    .replace('{{PROBLEM_DESCRIPTION}}', input.problemDescription)
+    .replace('{{ASSUMPTIONS}}', input.assumptions.length > 0 
+      ? input.assumptions.map(a => `| ${a} | To be assessed |`).join('\n')
+      : '| To be defined | To be assessed |')
+    .replace('{{CURRENT_STATE}}', input.currentState || 'To be defined')
+    .replace('{{PROPOSED_SOLUTION}}', input.proposedSolution)
+    .replace('{{TECHNICAL_APPROACH}}', input.technicalApproach || 'To be defined')
+    .replace('{{DEPENDENCIES}}', input.dependencies || 'To be identified')
+    .replace('{{CONSTRAINTS}}', input.constraints || 'To be identified')
+    .replace('{{IMPACTS}}', input.impacts.map(i => 
+      `| ${i.component} | ${i.impact} | ${i.description} |`).join('\n'))
+    .replace('{{RISKS}}', input.risks.map(r => 
+      `| ${r.risk} | ${r.description} | ${r.mitigation} |`).join('\n'))
+    .replace('{{ANALYSIS_ESTIMATE}}', 'TBD')
+    .replace('{{DEV_ESTIMATE}}', 'TBD')
+    .replace('{{TEST_ESTIMATE}}', 'TBD')
+    .replace('{{DEPLOY_ESTIMATE}}', 'TBD')
+    .replace('{{TOTAL_ESTIMATE}}', 'TBD')
+    .replace('{{NEXT_STEPS}}', input.nextSteps 
+      ? input.nextSteps.split('\n').map(s => `- [ ] ${s.trim()}`).join('\n')
+      : '- [ ] To be defined')
+    .replace('{{REFERENCES}}', '- To be added');
+
+  // Create directory and file
+  if (!fs.existsSync(taDir)) {
+    fs.mkdirSync(taDir, { recursive: true });
+  }
+  fs.writeFileSync(filepath, content);
+
+  // Open the file
+  const doc = await vscode.workspace.openTextDocument(filepath);
+  await vscode.window.showTextDocument(doc);
+
+  stream.markdown(`✅ **Created:** \`${filename}\`
+
+| Field | Value |
+|-------|-------|
+| Category | ${input.category} |
+| Priority | ${input.priority} |
+| Impacts | ${input.impacts.length} items |
+| Risks | ${input.risks.length} items |
 
 The file is now open in the editor.
 `);
