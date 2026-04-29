@@ -1,0 +1,89 @@
+{
+  "name": "adr-agent",
+  "displayName": "ADR & TA Agent",
+  "description": "Create Architecture Decision Records and Tech Assessments with guided interview and AI assistance",
+  "version": "0.0.6",
+  "publisher": "ewan-peters",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "adr-agent.adr",
+        "name": "adr",
+        "description": "Creates Architecture Decision Records with guided interview and AI assistance",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "new",
+            "description": "Start guided ADR interview (6 steps with multi-turn conversation)"
+          },
+          {
+            "name": "quick",
+            "description": "Quick ADR creation with VS Code input dialogs"
+          },
+          {
+            "name": "cancel",
+            "description": "Cancel the current interview"
+          },
+          {
+            "name": "list",
+            "description": "List existing ADRs with status"
+          },
+          {
+            "name": "review",
+            "description": "Review open ADR against architecture principles"
+          },
+          {
+            "name": "suggest",
+            "description": "Get AI suggestions for ADR content by topic"
+          }
+        ]
+      },
+      {
+        "id": "adr-agent.ta",
+        "name": "ta",
+        "description": "Creates Tech Assessments with guided interview and AI assistance",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "new",
+            "description": "Start guided TA interview (6 steps including repos)"
+          },
+          {
+            "name": "quick",
+            "description": "Quick TA creation with VS Code input dialogs"
+          },
+          {
+            "name": "cancel",
+            "description": "Cancel the current interview"
+          },
+          {
+            "name": "list",
+            "description": "List existing Tech Assessments with status"
+          },
+          {
+            "name": "repos",
+            "description": "Show repository catalog from repos.md"
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.0"
+  }
+}
