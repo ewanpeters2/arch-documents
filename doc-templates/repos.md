@@ -10,32 +10,10 @@ Each repo should be listed with: `owner/repo` | Purpose | Key Files/Folders
 
 ## Core Services
 
-| Repository | Purpose | Key Files/Folders |
-|------------|---------|-------------------|
-| ewanpeters2/backend-api | Main backend API service | `src/services/`, `src/controllers/` |
-| ewanpeters2/frontend-app | React frontend application | `src/components/`, `src/hooks/` |
-| ewanpeters2/shared-utils | Shared utilities and helpers | `lib/`, `utils/` |
+| Repository | Purpose |
+|------------|---------|
+| https://github.com/Flutter-Global/tbd | TBD |
 
-## Infrastructure
-
-| Repository | Purpose | Key Files/Folders |
-|------------|---------|-------------------|
-| ewanpeters2/infra-terraform | Infrastructure as Code | `modules/`, `environments/` |
-| ewanpeters2/k8s-manifests | Kubernetes configurations | `deployments/`, `services/` |
-
-## Data & Messaging
-
-| Repository | Purpose | Key Files/Folders |
-|------------|---------|-------------------|
-| ewanpeters2/data-pipeline | Data processing pipelines | `src/pipelines/`, `src/transformers/` |
-| ewanpeters2/event-processor | Event/message processing | `src/handlers/`, `src/consumers/` |
-
-## Mobile
-
-| Repository | Purpose | Key Files/Folders |
-|------------|---------|-------------------|
-| ewanpeters2/ios-app | iOS native application | `Sources/`, `Views/` |
-| ewanpeters2/android-app | Android native application | `app/src/main/`, `features/` |
 
 ---
 
