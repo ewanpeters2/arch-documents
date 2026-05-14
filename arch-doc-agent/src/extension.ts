@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // =============================================================================
 // INTERVIEW STATE MANAGEMENT
@@ -97,17 +97,8 @@ const ADR_TEMPLATE = `# ADR-{{NUMBER}}: {{TITLE}}
 \`\`\`
 
 ## Principles Alignment
-<!-- How does this decision align with our architecture principles? -->
-| Principle | Alignment | Notes |
-|-----------|-----------|-------|
-| Cloud-First | {{CLOUD_FIRST}} | {{CLOUD_FIRST_NOTES}} |
-| API-First | {{API_FIRST}} | {{API_FIRST_NOTES}} |
-| Security by Design | {{SECURITY}} | {{SECURITY_NOTES}} |
-| Observability | {{OBSERVABILITY}} | {{OBSERVABILITY_NOTES}} |
-| Resilience | {{RESILIENCE}} | {{RESILIENCE_NOTES}} |
-| Cost Efficiency | {{COST}} | {{COST_NOTES}} |
-| Technology Standards | {{TECH_STANDARDS}} | {{TECH_STANDARDS_NOTES}} |
-| Data Management | {{DATA_MGMT}} | {{DATA_MGMT_NOTES}} |
+<!-- How does this decision align with our architecture principles? Reference: [Architecture Principles](../architecture-principles.md) -->
+{{PRINCIPLES_TABLE}}
 
 ## Impacts
 <!-- What areas will be impacted by this decision? -->
@@ -381,66 +372,131 @@ interface PrincipleReview {
   recommendation: string;
 }
 
-function reviewAgainstPrinciples(content: string): PrincipleReview[] {
-  const principles: PrincipleReview[] = [];
-  
-  principles.push({
-    name: 'Cloud-First',
-    status: /aws|azure|gcp|managed|serverless|cloud/i.test(content) ? '✅' : '⚠️',
-    notes: /aws|azure|gcp|managed|serverless|cloud/i.test(content) ? 'Uses cloud services' : 'Cloud approach unclear',
-    recommendation: 'Evaluate managed cloud services'
-  });
+/**
+ * Parses architecture-principles.md and extracts principle names
+ */
+function loadPrinciplesFromFile(workspaceRoot: string): string[] {
+    // Fix: Look in doc-templates folder, not workspace root
+    const principlesPath = path.join(workspaceRoot, 'doc-templates', 'architecture-principles.md');
+    const defaultPrinciples = [
+        'Cloud-First',
+        'API-First',
+        'Security by Design',
+        'Observability',
+        'Resilience',
+        'Cost Efficiency',
+        'Technology Standards',
+        'Data Management'
+    ];
 
-  principles.push({
-    name: 'API-First',
-    status: /api|rest|graphql|grpc|openapi/i.test(content) ? '✅' : '⚠️',
-    notes: /api|rest|graphql|grpc|openapi/i.test(content) ? 'API strategy included' : 'API approach unclear',
-    recommendation: 'Document API contracts'
-  });
+    try {
+        if (!fs.existsSync(principlesPath)) {
+            console.warn('architecture-principles.md not found, using defaults');
+            return defaultPrinciples;
+        }
 
-  principles.push({
-    name: 'Security by Design',
-    status: /security|auth|encrypt|tls|iam|oauth|cognito/i.test(content) ? '✅' : '⚠️',
-    notes: /security|auth|encrypt|tls|iam|oauth|cognito/i.test(content) ? 'Security addressed' : 'Security not mentioned',
-    recommendation: 'Add security considerations'
-  });
+        const content = fs.readFileSync(principlesPath, 'utf-8');
+        const principles: string[] = [];
 
-  principles.push({
-    name: 'Observability',
-    status: /log|metric|trace|monitor|cloudwatch|datadog|x-ray/i.test(content) ? '✅' : '⚠️',
-    notes: /log|metric|trace|monitor|cloudwatch|datadog|x-ray/i.test(content) ? 'Observability included' : 'Monitoring unclear',
-    recommendation: 'Define logging and metrics strategy'
-  });
+        // Match headers like "## 1. Cloud-First" or "## Cloud-First"
+        const headerRegex = /^##\s+(?:\d+\.\s+)?(.+?)(?:\s*{.*})?$/gm;
+        let match;
 
-  principles.push({
-    name: 'Resilience',
-    status: /resilience|retry|circuit|failover|redundan|backup|fallback/i.test(content) ? '✅' : '⚠️',
-    notes: /resilience|retry|circuit|failover|redundan|backup|fallback/i.test(content) ? 'Resilience addressed' : 'Failure handling unclear',
-    recommendation: 'Add failure scenarios and mitigations'
-  });
+        while ((match = headerRegex.exec(content)) !== null) {
+            const principle = match[1].trim();
+            // Skip non-principle headers like "Overview", "Introduction", etc.
+            if (!['Overview', 'Introduction', 'Summary', 'References', 'Appendix'].includes(principle)) {
+                principles.push(principle);
+            }
+        }
 
-  principles.push({
-    name: 'Cost Efficiency',
-    status: /cost|pricing|budget|pay-per|serverless|right-siz/i.test(content) ? '✅' : '⚠️',
-    notes: /cost|pricing|budget|pay-per|serverless|right-siz/i.test(content) ? 'Cost considered' : 'Cost implications unclear',
-    recommendation: 'Add cost analysis'
-  });
+        return principles.length > 0 ? principles : defaultPrinciples;
+    } catch (error) {
+        console.error('Error reading architecture-principles.md:', error);
+        return defaultPrinciples;
+    }
+}
 
-  principles.push({
-    name: 'Technology Standards',
-    status: /node|python|go|react|swift|kotlin|postgres|redis|kafka/i.test(content) ? '✅' : '⚠️',
-    notes: /node|python|go|react|swift|kotlin|postgres|redis|kafka/i.test(content) ? 'Uses approved tech' : 'Tech alignment unclear',
-    recommendation: 'Verify technology alignment'
-  });
+/**
+ * Gets regex patterns for validating each principle
+ */
+function getPrincipleValidationPatterns(): Map<string, RegExp> {
+    return new Map([
+        ['Cloud-First', /aws|azure|gcp|managed|serverless|cloud|saas|paas/i],
+        ['API-First', /api|openapi|swagger|rest|graphql|grpc|endpoint/i],
+        ['Security by Design', /security|encrypt|auth|jwt|oauth|ssl|tls|secret|vault|iam/i],
+        ['Observability', /log|metric|trace|monitor|alert|dashboard|health|observ/i],
+        ['Resilience', /circuit.?breaker|retry|fallback|redundan|failover|replica|backup/i],
+        ['Cost Efficiency', /cost|serverless|auto.?scal|right.?siz|spot|reserved|budget/i],
+        ['Technology Standards', /node|python|go|react|swift|kotlin|postgres|redis|kafka/i],
+        ['Data Management', /gdpr|retention|backup|pii|compliance|data.?protect|encrypt/i]
+    ]);
+}
 
-  principles.push({
-    name: 'Data Management',
-    status: /gdpr|retention|backup|privacy|pii|compliance/i.test(content) ? '✅' : '⚠️',
-    notes: /gdpr|retention|backup|privacy|pii|compliance/i.test(content) ? 'Data governance addressed' : 'Data governance unclear',
-    recommendation: 'Add data retention and privacy considerations'
-  });
+/**
+ * Reviews ADR content against dynamically loaded principles
+ */
+function reviewAgainstPrinciples(content: string, workspaceRoot: string): { name: string; status: string; notes: string }[] {
+    const principles = loadPrinciplesFromFile(workspaceRoot);
+    const patterns = getPrincipleValidationPatterns();
+    const results: { name: string; status: string; notes: string }[] = [];
 
-  return principles;
+    for (const principle of principles) {
+        const pattern = patterns.get(principle);
+        let status = '⚠️';
+        let notes = 'Not explicitly addressed';
+
+        if (pattern && pattern.test(content)) {
+            status = '✅';
+            notes = 'Addressed in document';
+        }
+
+        results.push({ name: principle, status, notes });
+    }
+
+    return results;
+}
+
+/**
+ * Generates the Principles Alignment table for ADR template
+ */
+function generatePrinciplesTable(workspaceRoot: string): string {
+    const principles = loadPrinciplesFromFile(workspaceRoot);
+    
+    let table = '| Principle | Alignment | Notes |\n';
+    table += '|-----------|-----------|-------|\n';
+    
+    for (const principle of principles) {
+        table += `| ${principle} | ✅ / ⚠️ / ❌ | |\n`;
+    }
+    
+    return table;
+}
+
+/**
+ * Generates the Principles Alignment table for ADR template with review results
+ */
+function generatePrinciplesTableWithReview(workspaceRoot: string, content: string): string {
+    const principles = loadPrinciplesFromFile(workspaceRoot);
+    const patterns = getPrincipleValidationPatterns();
+    
+    let table = '| Principle | Alignment | Notes |\n';
+    table += '|-----------|-----------|-------|\n';
+    
+    for (const principle of principles) {
+        const pattern = patterns.get(principle);
+        let status = '⚠️';
+        let notes = 'Review needed';
+
+        if (pattern && pattern.test(content)) {
+            status = '✅';
+            notes = 'Addressed';
+        }
+        
+        table += `| ${principle} | ${status} | ${notes} |\n`;
+    }
+    
+    return table;
 }
 
 // =============================================================================
@@ -656,7 +712,7 @@ ${adrList.map((a: { file: string; title: string; status: string }, i: number) =>
       }
 
       const content = activeEditor.document.getText();
-      const principles = reviewAgainstPrinciples(content);
+      const principles = reviewAgainstPrinciples(content, workspaceFolder);
 
       stream.markdown(`## 🔍 ADR Review
 
@@ -1115,6 +1171,15 @@ async function generateAndSaveADR(
     { risk: 'Implementation complexity', likelihood: 'Medium', impact: 'Medium', mitigation: 'Spike/POC first' }
   ];
 
+  // Get workspace root for dynamic principles
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+  
+  // Combine all content for principles review
+  const fullContent = `${input.title} ${input.problemStatement} ${input.decision} ${input.positive.join(' ')} ${input.negative.join(' ')}`;
+  
+  // Generate dynamic principles table with review
+  const principlesTable = generatePrinciplesTableWithReview(workspaceRoot, fullContent);
+
   const content = ADR_TEMPLATE
     .replace('{{NUMBER}}', nextNum)
     .replace('{{TITLE}}', input.title)
@@ -1126,14 +1191,7 @@ async function generateAndSaveADR(
     .replace('{{CONTEXT}}', input.problemStatement)
     .replace('{{DECISION}}', input.decision)
     .replace('{{DIAGRAM}}', generateDiagram(input.topic, input.title))
-    .replace('{{CLOUD_FIRST}}', '✅').replace('{{CLOUD_FIRST_NOTES}}', '')
-    .replace('{{API_FIRST}}', '✅').replace('{{API_FIRST_NOTES}}', '')
-    .replace('{{SECURITY}}', '✅').replace('{{SECURITY_NOTES}}', '')
-    .replace('{{OBSERVABILITY}}', '⚠️').replace('{{OBSERVABILITY_NOTES}}', 'Review needed')
-    .replace('{{RESILIENCE}}', '⚠️').replace('{{RESILIENCE_NOTES}}', 'Review needed')
-    .replace('{{COST}}', '✅').replace('{{COST_NOTES}}', '')
-    .replace('{{TECH_STANDARDS}}', '✅').replace('{{TECH_STANDARDS_NOTES}}', '')
-    .replace('{{DATA_MGMT}}', '✅').replace('{{DATA_MGMT_NOTES}}', '')
+    .replace('{{PRINCIPLES_TABLE}}', principlesTable)
     .replace('{{TEAMS_IMPACTED}}', teams.map((t: string) => `- ${t}`).join('\n'))
     .replace('{{SYSTEMS_IMPACTED}}', '- To be identified')
     .replace('{{TIMELINE}}', '| Design | Architecture and planning | 1-2 weeks |\n| Implementation | Development and testing | 2-4 weeks |\n| Rollout | Staged deployment | 1-2 weeks |')

@@ -25,7 +25,7 @@
 ```
 
 ## Principles Alignment
-<!-- How does this decision align with our architecture principles? -->
+<!-- How does this decision align with our architecture principles? Reference: [Architecture Principles](../architecture-principles.md) -->
 | Principle | Alignment | Notes |
 |-----------|-----------|-------|
 | Cloud-First | ✅ / ⚠️ / ❌ | |
