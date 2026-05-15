@@ -42,6 +42,7 @@ Work through the interview below in order. Ask one group of questions at a time;
 
 - What options have you already identified?
 - For each option: what is your current understanding of its trade-offs?
+- For each option: who are the key actors (users, operators, external parties) and which external systems or services does the option interact with? (This will be used to generate a C4 System Context diagram per option.)
 - Do you already have a leaning or recommended option? If so, what is driving that preference?
 
 At this point, cross-reference the options against what you found in existing ADRs, RFCs, and TAs. Suggest any options the user has not mentioned that appear relevant based on:
@@ -82,7 +83,14 @@ Use the format: `ADR-{DOMAIN}-{INITIATIVE}-{SEQUENCE}-{Kebab-Title}.md`
 Infer the sequence number from existing ADRs in the repo (increment from the highest number found). If no ADRs exist, start at `0001`.
 
 ### Template structure to follow
-refer to the template at `.arch-artifact-templates/ADR-Domain-Initiative-0000-Title.md` and populate it with the information gathered in the interview. 
+
+Refer to the template at `doc-templates/adr-template.md` and populate it with the information gathered in the interview.
+
+When generating the ADR:
+- Produce one `## Alternatives Considered` sub-section per option (including any options not chosen).
+- For each option, generate a Mermaid `C4Context` diagram showing: the system in scope, key user/operator personas, and the external systems it interacts with in that option. Label all relationships with the interaction type.
+- Keep all C4 diagrams at **Level 1 (System Context)**. Do not go into container or component level unless explicitly requested.
+- The `## Architecture Diagram (Chosen Option)` section should contain a C4 System Context diagram for the selected option only.
 
 
 ### Tone and style

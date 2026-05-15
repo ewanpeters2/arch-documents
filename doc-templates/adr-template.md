@@ -22,10 +22,12 @@
 <!-- What is the change that we're proposing and/or doing? -->
 {{DECISION}}
 
-## Architecture Diagram
-<!-- Visualise the architecture using Mermaid syntax -->
+## Architecture Diagram (Chosen Option)
+<!-- Visualise the chosen option's architecture using Mermaid C4 System Context syntax. Keep to C4 Level 1 (System Context) unless explicitly requested otherwise. -->
 ```mermaid
-{{DIAGRAM}}
+C4Context
+  title System Context — {{TITLE}}
+  {{DIAGRAM}}
 ```
 
 ## Principles Alignment
@@ -73,8 +75,45 @@
 {{NEGATIVE_CONSEQUENCES}}
 
 ## Alternatives Considered
-<!-- What other options were considered? -->
-{{ALTERNATIVES}}
+<!-- One sub-section per option considered. Each option includes a C4 System Context diagram (Level 1) showing the system in scope, external actors, neighbouring systems, and their interactions. -->
+
+### Option 1: {{OPTION_1_TITLE}}
+
+{{OPTION_1_DESCRIPTION}}
+
+**Pros / Cons**
+- ✅ Good, because...
+- ❌ Bad, because...
+
+**C4 System Context Diagram**
+```mermaid
+C4Context
+  title System Context — Option 1: {{OPTION_1_TITLE}}
+  Person(user, "{{USER_ROLE}}", "{{USER_DESCRIPTION}}")
+  System(system, "{{SYSTEM_NAME}}", "{{SYSTEM_DESCRIPTION}}")
+  System_Ext(extSystem, "{{EXT_SYSTEM_NAME}}", "{{EXT_SYSTEM_DESCRIPTION}}")
+  Rel(user, system, "{{INTERACTION}}")
+  Rel(system, extSystem, "{{INTEGRATION}}")
+```
+
+### Option 2: {{OPTION_2_TITLE}}
+
+{{OPTION_2_DESCRIPTION}}
+
+**Pros / Cons**
+- ✅ Good, because...
+- ❌ Bad, because...
+
+**C4 System Context Diagram**
+```mermaid
+C4Context
+  title System Context — Option 2: {{OPTION_2_TITLE}}
+  Person(user, "{{USER_ROLE}}", "{{USER_DESCRIPTION}}")
+  System(system, "{{SYSTEM_NAME}}", "{{SYSTEM_DESCRIPTION}}")
+  System_Ext(extSystem, "{{EXT_SYSTEM_NAME}}", "{{EXT_SYSTEM_DESCRIPTION}}")
+  Rel(user, system, "{{INTERACTION}}")
+  Rel(system, extSystem, "{{INTEGRATION}}")
+```
 
 ## Related Decisions
 <!-- List any related ADRs - add links to relevant decisions -->
