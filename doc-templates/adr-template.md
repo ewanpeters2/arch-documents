@@ -1,3 +1,7 @@
+<!-- 
+  ADR Template
+  ⚠️ Keep in sync with: .github/copilot-instructions.md
+-->
 # ADR-{{NUMBER}}: {{TITLE}}
 
 ## Metadata
