@@ -4,19 +4,47 @@
 -->
 # ADR-{{NUMBER}}: {{TITLE}}
 
+## Table of Contents
+
+- [Version Control](#document-version)
+- [Document Overview](#metadata)
+- [Context](#context)
+- [Decision Drivers](#decision-drivers)
+- [Decision Drivers](#decision)
+- [Considered Options](#considered-options)
+- [Recommendation](#recommendation)
+- [Consequences](#consequences)
+- [Pros and Cons](#pros-and-cons)
+  - [\<Option 1\>](#option-1)
+  - [\<Option 2\>](#option-2)
+- [Links](#links)
+
+**Document Version:**
+
+| Version | Date | Who | What |
+|---------|------|-----|------|
+| 0.1 | Jun 3, 2024 | | Draft |
+| | | | |
+
 ## Metadata
 
 | Field | Value |
 |-------|-------|
-| Status | {{STATUS}} <!-- Draft | Proposed | Accepted | Deprecated | Superseded --> |
-| Date | {{DATE}} |
-| Owner | {{OWNER}} |
-| Category | {{CATEGORY}} <!-- Infrastructure | Data | Security | Integration | API | Other --> |
-| Priority | {{PRIORITY}} <!-- High | Medium | Low --> |
+| **Decision Required** | \<Problem statement described in question form\> |
+| **Decision Outcome** | \<A brief summary of the outcome of the decision\> |
+| **Owner** | \<The individual responsible for progressing the decision\> |
+| **Domain** | |
+| **Current Status** | `Proposed` / `Rejected` / `Signed Off` |
+| **Deciders** | \<Everyone involved in the decision\> |
 
 ## Context
 <!-- What is the issue that we're seeing that is motivating this decision or change? -->
 {{CONTEXT}}
+
+## Decision Drivers
+
+- \<Driver 1, e.g. cost\>
+- \<Driver 2, e.g. reliability\>
 
 ## Decision
 <!-- What is the change that we're proposing and/or doing? -->
@@ -138,13 +166,6 @@ C4Context
 | ADR-021 | Replace Polling with Push for Prices | [adr-021](../adr-docs/adr-021-replace-polling-with-push-for-prices.md) |
 
 <!-- Delete rows that are not relevant to this ADR -->
-
-## Related Repositories
-<!-- GitHub repositories relevant to this decision for code review and context -->
-| Repository | Purpose | Key Files/Folders |
-|------------|---------|-------------------|
-| {{REPO_1}} | {{REPO_PURPOSE_1}} | {{KEY_FILES_1}} |
-| {{REPO_2}} | {{REPO_PURPOSE_2}} | {{KEY_FILES_2}} |
 
 ## References
 <!-- Links to relevant documentation, diagrams, etc. -->
