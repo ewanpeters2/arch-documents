@@ -18,9 +18,9 @@ Keep all of this in context. Do not narrate the loading step.
 
 ## Step 2 — Exhaustive interview
 
-Work through the interview below in order. Ask one group of questions at a time; wait for the user's answers before moving on. Mark each group clearly (e.g. **[1/6] Problem statement**). Never skip a group, but you may skip individual questions within a group if the user has already answered them.
+Work through the interview below in order. Ask one group of questions at a time; wait for the user's answers before moving on. Mark each group clearly (e.g. **[1/6] Problem description**). Never skip a group, but you may skip individual questions within a group if the user has already answered them.
 
-### [1/6] Problem statement
+### [1/6] Problem description
 
 - What problem are you trying to solve? Describe it in plain language.
 - What is the current state — what is in place today, and why is it insufficient?
@@ -61,6 +61,7 @@ For each confirmed option (user-provided + any accepted suggestions):
 - Is there a clear recommended option at this point, or is the ADR meant to leave it open?
 - What are the direct consequences of choosing the recommended option? (positive and negative)
 - What is the current status? (Proposed / Rejected / Signed Off)
+- Using a T-Shirt Size approach (S,M,L) , in terms of effort, what size would you apply to each component of the work. How long do you think that this will take ? The output of this should be used to complete the Timeline section of the adr-template
 
 ---
 
