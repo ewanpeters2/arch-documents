@@ -9,7 +9,7 @@ You are helping the user write a Technical Assessment (TA). Follow the interview
 Before asking the user anything, silently do all of the following:
 
 1. Read the TA template at `doc-templates/ta-template.md`
-2. List and skim all existing ADRs under `adr-docs/` and `ta-docs` any PDF filenames under `.arch-artifacts/` — note titles, domains, and decision outcomes. You will use these to spot overlap and suggest options the user may not have considered.
+2. List and skim all existing ADRs under `adr-docs/` and TAs under`ta-docs` any PDF filenames under `.arch-artifacts/` — note titles, domains, and decision outcomes. You will use these to spot overlap and suggest options the user may not have considered.
 3. Skim any RFCs under `tech-decisions/requests-for-comments/` and TAs under `tech-decisions/technical-assessments/` — these often contain unresolved questions that ADRs are meant to close.
 
 Keep all of this in context. Do not narrate the loading step.

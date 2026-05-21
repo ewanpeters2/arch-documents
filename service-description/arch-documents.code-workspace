@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../foe-service"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
+}
