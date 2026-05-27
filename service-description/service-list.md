@@ -1,4 +1,6 @@
-This is used by Skill: /service-description.md
+# Skill: /arch-validation
+
+This 
 
 The following file contains a list of service and their repo location:
 
