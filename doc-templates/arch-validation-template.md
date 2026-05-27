@@ -10,8 +10,6 @@
 - [Considered Options]
 
 
-
-
 ## Context and Assumptions
 <!--Core architecture objectives-->
 
